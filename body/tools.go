@@ -119,3 +119,15 @@ func deletefile(fileid string) bool {
 	}
 	return true
 }
+
+// 判断是否为private filename格式
+func isprivatefilename(filename string) bool {
+	if !strings.ContainsRune(filename, '/') {
+		return false
+	}
+	namearr := strings.Split(filename, "/")
+	if len(namearr) != 2 || len(namearr[0]) < 1 || len(namearr[1]) < 1 {
+		return false
+	}
+	return true
+}

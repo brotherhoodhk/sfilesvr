@@ -139,7 +139,6 @@ func OtherCommand(w http.ResponseWriter, r *http.Request) {
 			err := ws.ReadJSON(&cmd)
 			if err != nil {
 				resp.StatusCode = 500
-				ws.WriteJSON(resp)
 				goto passthrough
 			}
 			switch cmd.Actionid {
@@ -147,13 +146,11 @@ func OtherCommand(w http.ResponseWriter, r *http.Request) {
 				//删除指定文件
 				if len(cmd.Header) == 0 {
 					resp.StatusCode = 400
-					ws.WriteJSON(resp)
 					goto passthrough
 				}
 				filemap := ParseList(filemappath)
 				if _, ok := filemap[cmd.Header]; !ok {
 					resp.StatusCode = 200
-					ws.WriteJSON(resp)
 					goto passthrough
 				}
 				if deletefile(filemap[cmd.Header]) {
@@ -168,20 +165,33 @@ func OtherCommand(w http.ResponseWriter, r *http.Request) {
 				//在private 目录下新建子目录
 				if len(cmd.Header) == 0 {
 					resp.StatusCode = 400
-					ws.WriteJSON(resp)
 					goto passthrough
 				}
 				if mkdirinprivate(cmd.Header) {
 					resp.StatusCode = 200
-					ws.WriteJSON(resp)
 					goto passthrough
 				} else {
 					resp.StatusCode = 400
-					ws.WriteJSON(resp)
 					goto passthrough
 				}
+			case 431:
+				if len(cmd.Header) == 0 {
+					resp.StatusCode = 400
+					goto passthrough
+				}
+				if !isprivatefilename(cmd.Header) {
+					resp.StatusCode = 401
+					goto passthrough
+				}
+				if deletefilefromprivate(cmd.Header) {
+					resp.StatusCode = 200
+				} else {
+					resp.StatusCode = 400
+				}
+				goto passthrough
 			}
 		passthrough:
+			ws.WriteJSON(resp)
 		}
 	}()
 }

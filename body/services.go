@@ -120,3 +120,25 @@ func saveprivatefile(dirid, filename string, content []byte) bool {
 	SaveFile(content, dirid+filelist[filename], "")
 	return true
 }
+func deletefilefromprivate(heads string) bool {
+	namearr := strings.Split(heads, "/")
+	filelist := ParseList(filemappath)
+	if _, ok := filelist[namearr[0]]; !ok {
+		return true
+	}
+	firid := filelist[namearr[0]]
+	filelist = ParseList(privatemapdir + firid)
+	if _, ok := filelist[namearr[1]]; !ok {
+		return true
+	}
+	secid := filelist[namearr[1]]
+	completeid := firid + secid
+	if deletefile(completeid) {
+		//删除对应目录对应文件联系
+		delete(filelist, namearr[1])
+		FormatList(filelist, privatemapdir+firid)
+		return true
+	} else {
+		return false
+	}
+}
