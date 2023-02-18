@@ -3,6 +3,7 @@ package body
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 	"strconv"
 	"strings"
 )
@@ -81,4 +82,40 @@ func getfilepath(fileid string, version int) (string, bool) {
 		return "", false
 	}
 	return parentpath, true
+}
+
+// get file real path by file id
+func getfilepathbyid(fileid string) (string, bool) {
+	var parentpath string
+	if len(fileid) == 7 {
+		//private zone
+		firdir := fileid[:3]
+		secdir := fileid[3:]
+		parentpath = privatedir + firdir + "/" + secdir
+	} else if len(fileid) == 6 {
+		//public zone
+		parentpath = publicdir + fileid
+	} else {
+		return "", false
+	}
+	return parentpath, true
+}
+
+// 删除云端filesystem 中指定文件
+func deletefile(fileid string) bool {
+	filepath, ok := getfilepathbyid(fileid)
+	if !ok {
+		return false
+	}
+	_, err := os.Stat(filepath)
+	if err != nil {
+		//file dont exist
+		return true
+	}
+	err = os.RemoveAll(filepath)
+	if err != nil {
+		errorlog.Println(err)
+		return false
+	}
+	return true
 }

@@ -38,6 +38,7 @@ func init() {
 func ServerStart() {
 	go hub.Run()
 	http.HandleFunc("/singlefile", AcceptFile)
+	http.HandleFunc("/cmdline", OtherCommand)
 	fmt.Println("listen at port ", port)
 	http.ListenAndServe(":"+strconv.Itoa(port), nil)
 }

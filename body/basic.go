@@ -48,6 +48,13 @@ type Response struct {
 	Footer     string
 }
 
+// 通用指令协议
+type CommonCommand struct {
+	Header   string
+	Cmd      map[string]string
+	Actionid int
+}
+
 func (s *Hub) Run() {
 	for {
 		select {

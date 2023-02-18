@@ -1,7 +1,7 @@
 package body
 
 import (
-	"fmt"
+	// "fmt"
 	"math/rand"
 	"net/http"
 	"os"
@@ -14,7 +14,7 @@ func AcceptFile(w http.ResponseWriter, r *http.Request) {
 	upgrade.CheckOrigin = func(r *http.Request) bool { return true }
 	ws, err := upgrade.Upgrade(w, r, nil)
 	if err != nil {
-		fmt.Println(err)
+		// fmt.Println(err)
 		errorlog.Println(err)
 	}
 	con := &Connection{con: ws, send: make(chan []byte)}
@@ -96,6 +96,58 @@ func AcceptFile(w http.ResponseWriter, r *http.Request) {
 				ws.WriteJSON(statusresp)
 			}
 		passthroug:
+		}
+	}()
+}
+
+// 接受其他指令
+func OtherCommand(w http.ResponseWriter, r *http.Request) {
+	upgrade.CheckOrigin = func(r *http.Request) bool { return true }
+	ws, err := upgrade.Upgrade(w, r, nil)
+	if err != nil {
+		// fmt.Println(err)
+		errorlog.Println(err)
+	}
+	con := &Connection{con: ws, send: make(chan []byte)}
+	hub.register <- con
+	defer func() {
+		hub.unregister <- con
+		ws.Close()
+	}()
+	func() {
+		var cmd CommonCommand
+		var resp = new(Response)
+		for {
+			err := ws.ReadJSON(&cmd)
+			if err != nil {
+				resp.StatusCode = 500
+				ws.WriteJSON(resp)
+				goto passthrough
+			}
+			switch cmd.Actionid {
+			case 3:
+				//删除指定文件
+				if len(cmd.Header) == 0 {
+					resp.StatusCode = 400
+					ws.WriteJSON(resp)
+					goto passthrough
+				}
+				filemap := ParseList(filemappath)
+				if _, ok := filemap[cmd.Header]; !ok {
+					resp.StatusCode = 200
+					ws.WriteJSON(resp)
+					goto passthrough
+				}
+				if deletefile(filemap[cmd.Header]) {
+					delete(filemap, cmd.Header)
+					resp.StatusCode = 200
+				} else {
+					//delete file failed
+					resp.StatusCode = 400
+				}
+				ws.WriteJSON(resp)
+			}
+		passthrough:
 		}
 	}()
 }
