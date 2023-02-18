@@ -68,34 +68,52 @@ func AcceptFile(w http.ResponseWriter, r *http.Request) {
 				}
 				if _, ok := filemap[msg.MessBox]; !ok {
 					statusresp.StatusCode = 400
-					ws.WriteJSON(statusresp)
 					goto passthroug
 				}
 				fileid := filemap[msg.MessBox]
 				filepath, ok := getfilepath(fileid, version)
 				if !ok {
 					statusresp.StatusCode = 400
-					ws.WriteJSON(statusresp)
 					goto passthroug
 				}
 				f, err := os.OpenFile(filepath, os.O_RDONLY, 0666)
 				if err != nil {
 					statusresp.StatusCode = 400
-					ws.WriteJSON(statusresp)
 					goto passthroug
 				}
 				lang, err := f.Read(buff)
 				if err != nil {
 					statusresp.StatusCode = 400
-					ws.WriteJSON(statusresp)
 					goto passthroug
 				}
 				statusresp.StatusCode = 200
 				statusresp.Content = buff[:lang]
 				statusresp.Footer = msg.MessBox
 				ws.WriteJSON(statusresp)
+			case 41:
+				if !strings.ContainsRune(msg.MessBox, '/') || len(msg.MessBox) < 3 {
+					statusresp.StatusCode = 401
+					goto passthroug
+				}
+				dirarr := strings.Split(msg.MessBox, "/")
+				if len(dirarr) != 2 || len(dirarr[0]) < 1 || len(dirarr[1]) < 1 {
+					//不符合 dirname/filename的规范
+					statusresp.StatusCode = 401
+					goto passthroug
+				}
+				filemap := ParseList(filemappath)
+				if _, ok := filemap[dirarr[0]]; !ok || len(msg.Content) < 1 {
+					statusresp.StatusCode = 400
+					goto passthroug
+				}
+				if saveprivatefile(filemap[dirarr[0]], dirarr[1], msg.Content) {
+					statusresp.StatusCode = 200
+				} else {
+					statusresp.StatusCode = 400
+				}
 			}
 		passthroug:
+			ws.WriteJSON(statusresp)
 		}
 	}()
 }
@@ -146,6 +164,22 @@ func OtherCommand(w http.ResponseWriter, r *http.Request) {
 					resp.StatusCode = 400
 				}
 				ws.WriteJSON(resp)
+			case 40:
+				//在private 目录下新建子目录
+				if len(cmd.Header) == 0 {
+					resp.StatusCode = 400
+					ws.WriteJSON(resp)
+					goto passthrough
+				}
+				if mkdirinprivate(cmd.Header) {
+					resp.StatusCode = 200
+					ws.WriteJSON(resp)
+					goto passthrough
+				} else {
+					resp.StatusCode = 400
+					ws.WriteJSON(resp)
+					goto passthrough
+				}
 			}
 		passthrough:
 		}
