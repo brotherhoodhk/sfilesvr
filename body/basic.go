@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
+	"strings"
 
 	"github.com/gorilla/websocket"
 )
@@ -90,4 +92,18 @@ func Exist_File(path string) bool {
 		return false
 	}
 	return true
+}
+func GetVersion(filename string) (string, int) {
+	if !strings.ContainsRune(filename, '@') {
+		return filename, -1
+	}
+	namearr := strings.Split(filename, "@")
+	if len(namearr) < 2 && (len(namearr[0]) < 1 || len(namearr[1]) < 1) {
+		return filename, -1
+	}
+	ver, err := strconv.Atoi(namearr[len(namearr)-1])
+	if err != nil {
+		return filename, -1
+	}
+	return strings.Join(namearr[:len(namearr)-1], ""), ver
 }

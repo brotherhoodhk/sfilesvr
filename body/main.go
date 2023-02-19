@@ -136,6 +136,8 @@ func OtherCommand(w http.ResponseWriter, r *http.Request) {
 		var cmd CommonCommand
 		var resp = new(Response)
 		for {
+			resp.Footer = ""
+			resp.Content = nil
 			err := ws.ReadJSON(&cmd)
 			if err != nil {
 				resp.StatusCode = 500
@@ -174,6 +176,30 @@ func OtherCommand(w http.ResponseWriter, r *http.Request) {
 					resp.StatusCode = 400
 					goto passthrough
 				}
+			case 42:
+				//获取指定private file
+				if !isprivatefilename(cmd.Header) {
+					resp.StatusCode = 401
+					goto passthrough
+				}
+				namearr := strings.Split(cmd.Header, "/")
+				name, ver := GetVersion(namearr[1])
+				namearr[1] = name
+				cmd.Header = strings.Join(namearr, "/")
+				if fileid, ok := isexistprivatefile(cmd.Header); ok {
+					content, okk := getfilecontent(fileid, ver)
+					if !okk {
+						resp.StatusCode = 400
+						goto passthrough
+					}
+					resp.StatusCode = 200
+					resp.Content = content
+					resp.Footer = namearr[1]
+					goto passthrough
+				} else {
+					resp.StatusCode = 401
+					goto passthrough
+				}
 			case 43:
 				//删除private区指定目录
 				if len(cmd.Header) == 0 {
@@ -186,6 +212,12 @@ func OtherCommand(w http.ResponseWriter, r *http.Request) {
 					_, err := os.Stat(privatedir + dirid)
 					if err == nil {
 						err = os.RemoveAll(privatedir + dirid)
+						if err != nil {
+							errorlog.Println(err)
+							resp.StatusCode = 400
+							goto passthrough
+						}
+						err = os.Remove(privatemapdir + dirid)
 						if err != nil {
 							errorlog.Println(err)
 							resp.StatusCode = 400

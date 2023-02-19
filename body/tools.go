@@ -1,6 +1,7 @@
 package body
 
 import (
+	"bufio"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -130,4 +131,61 @@ func isprivatefilename(filename string) bool {
 		return false
 	}
 	return true
+}
+
+// return file content
+func getfilecontent(fileid string, version int) ([]byte, bool) {
+	realpath, ok := getfilepath(fileid, version)
+	if !ok {
+		return nil, false
+	}
+	if _, err := os.Stat(realpath); err != nil {
+		return nil, false
+	}
+	f, err := os.OpenFile(realpath, os.O_RDONLY, 0666)
+	if err != nil {
+		errorlog.Println(err)
+		return nil, false
+	}
+	defer f.Close()
+	read := bufio.NewReader(f)
+	var buff = make([]byte, wrbuffsize)
+	lang, err := read.Read(buff)
+	if err != nil {
+		errorlog.Println(err)
+		return nil, false
+	}
+	return buff[:lang], true
+}
+
+// 查看是否存在,若存在返回完整文件id
+func isexistprivatefile(filename string) (string, bool) {
+	if !isprivatefilename(filename) {
+		return "", false
+	}
+	namearr := strings.Split(filename, "/")
+	filelist := ParseList(filemappath)
+	if _, ok := filelist[namearr[0]]; !ok { //find dirname is whether exist
+		processlog.Println(namearr[0], " is not exist in private dir")
+		return "", false
+	}
+	dirid := filelist[namearr[0]]
+	if _, err := os.Stat(privatedir + dirid); err != nil {
+		processlog.Println(dirid, " is not exist in private dir")
+		return "", false
+	} else if _, err := os.Stat(privatemapdir + dirid); err != nil {
+		//private目录存在但没有对应的filemap
+		processlog.Println(dirid, " dont have filemap,will auto create it")
+		_, err = os.OpenFile(privatemapdir+dirid, os.O_CREATE, 0664)
+		if err != nil {
+			processlog.Println(dirid, " filemap create failed")
+		}
+		return "", false
+	}
+
+	filelist = ParseList(privatemapdir + dirid)
+	if _, ok := filelist[namearr[1]]; !ok {
+		return "", false
+	}
+	return dirid + filelist[namearr[1]], true
 }
