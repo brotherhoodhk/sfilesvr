@@ -174,6 +174,29 @@ func OtherCommand(w http.ResponseWriter, r *http.Request) {
 					resp.StatusCode = 400
 					goto passthrough
 				}
+			case 43:
+				//删除private区指定目录
+				if len(cmd.Header) == 0 {
+					resp.StatusCode = 400
+					goto passthrough
+				}
+				filelist := ParseList(filemappath)
+				if dirid, ok := filelist[cmd.Header]; ok && len(dirid) == 3 {
+					//目录名存在
+					_, err := os.Stat(privatedir + dirid)
+					if err == nil {
+						err = os.RemoveAll(privatedir + dirid)
+						if err != nil {
+							errorlog.Println(err)
+							resp.StatusCode = 400
+							goto passthrough
+						}
+					}
+					delete(filelist, cmd.Header)
+					FormatList(filelist, filemappath)
+					resp.StatusCode = 200
+					goto passthrough
+				}
 			case 431:
 				if len(cmd.Header) == 0 {
 					resp.StatusCode = 400
