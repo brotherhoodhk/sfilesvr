@@ -34,8 +34,18 @@ func init() {
 			port = ports
 		}
 	}
+	//initialzation wrbuffsize
+	if size, ok := list["wrbuffsize"]; ok {
+		fsize, err := strconv.Atoi(size)
+		if err != nil {
+			processlog.Println("wrbuffsize is not number,server will use default size")
+		} else {
+			wrbuffsize = fsize * MB
+		}
+	}
 }
 func ServerStart() {
+	fmt.Println("wrbuffsize is ", wrbuffsize/MB, " MB")
 	go hub.Run()
 	http.HandleFunc("/singlefile", AcceptFile)
 	http.HandleFunc("/cmdline", OtherCommand)
