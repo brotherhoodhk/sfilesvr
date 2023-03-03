@@ -156,6 +156,7 @@ func OtherCommand(w http.ResponseWriter, r *http.Request) {
 				}
 				if deletefile(filemap[cmd.Header]) {
 					delete(filemap, cmd.Header)
+					FormatList(filemap, filemappath)
 					resp.StatusCode = 200
 				} else {
 					//delete file failed
