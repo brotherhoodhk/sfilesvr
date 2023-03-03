@@ -2,6 +2,7 @@ package body
 
 import (
 	"fmt"
+	"github.com/oswaldoooo/octools/toolsbox"
 	"net/http"
 	"os"
 	"strconv"
@@ -9,6 +10,7 @@ import (
 
 var list = ParseList(ROOTPATH + "/conf/site.cnf")
 var port = 8001
+var authkey string = ""
 
 func init() {
 	fmt.Println("start initiazation...")
@@ -41,6 +43,15 @@ func init() {
 			processlog.Println("wrbuffsize is not number,server will use default size")
 		} else {
 			wrbuffsize = fsize * MB
+		}
+	}
+	//initialzation authkey
+	if key, ok := list["authkey"]; ok {
+		keybytes := toolsbox.Sha256([]byte(key))
+		if keybytes != nil {
+			authkey = string(keybytes)
+		} else {
+			processlog.Println("cant encrypt key to sha256")
 		}
 	}
 }
