@@ -244,9 +244,109 @@ func OtherCommand(w http.ResponseWriter, r *http.Request) {
 					resp.StatusCode = 400
 				}
 				goto passthrough
+			case 900:
+				//test function
+				if AuthServe(&cmd.Auth) {
+					resp.StatusCode = 200
+				} else {
+					resp.StatusCode = 400
+				}
+				goto passthrough
+			case 940:
+				//认证版新建目录
+				if AuthServe(&cmd.Auth) && len(cmd.Header) > 0 {
+					if mkdirinprivate(cmd.Header) {
+						filelist := ParseList(filemappath)
+						fileid := filelist[cmd.Header]
+						oke := AddToFPMS(fileid, string(cmd.Auth.Usrname), "760", FILEPMS)
+						if !oke {
+							resp.StatusCode = 400
+						} else {
+							resp.StatusCode = 200
+						}
+					}
+				} else {
+					resp.StatusCode = 400
+				}
+				goto passthrough
 			}
 		passthrough:
 			ws.WriteJSON(resp)
+		}
+	}()
+}
+
+// add auth
+func AcceptFilePlus(w http.ResponseWriter, r *http.Request) {
+	upgrade.CheckOrigin = func(r *http.Request) bool { return true }
+	ws, err := upgrade.Upgrade(w, r, nil)
+	if err != nil {
+		// fmt.Println(err)
+		errorlog.Println(err)
+	}
+	con := &Connection{con: ws, send: make(chan []byte)}
+	hub.register <- con
+	defer func() {
+		hub.unregister <- con
+		ws.Close()
+	}()
+	func() {
+		var msg SendMsgPlus
+		statusresp := &Response{}
+		for {
+			statusresp.Content = nil
+			statusresp.Footer = ""
+			err := ws.ReadJSON(&msg)
+			if err != nil {
+				//如果解析不出来，则为数据受损，向客户端发送状态码500，跳过本回合
+				statusresp.StatusCode = 500
+				goto passthroug
+			}
+			if !AuthServe(&msg.Auth) {
+				statusresp.StatusCode = 400
+				goto passthroug
+			}
+			switch msg.Action {
+			case 941:
+				//客户端向服务端上传私立目录文件
+				if !strings.ContainsRune(msg.MessBox, '/') || len(msg.MessBox) < 3 {
+					statusresp.StatusCode = 401
+					goto passthroug
+				}
+				dirarr := strings.Split(msg.MessBox, "/")
+				if len(dirarr) != 2 || len(dirarr[0]) < 1 || len(dirarr[1]) < 1 {
+					//不符合 dirname/filename的规范
+					statusresp.StatusCode = 401
+					goto passthroug
+				}
+				filemap := ParseList(filemappath)
+				//debugline
+				processlog.Println(filemap)
+				if _, ok := filemap[dirarr[0]]; !ok || len(msg.Content) < 1 {
+					processlog.Println(dirarr[0], " dont exist in filemap msg content length ", len(msg.Content))
+					statusresp.StatusCode = 400
+					goto passthroug
+				}
+				//检查用户权限是否符合要求
+				usfinfo, ok := GetUserInfo(string(msg.Auth.Usrname))
+				if !ok {
+					processlog.Println("some error occur")
+					statusresp.StatusCode = 400
+					goto passthroug
+				}
+				pmsarr := CheckPmsForFile(string(msg.Auth.Usrname), usfinfo, filemap[dirarr[0]])
+				if !pmsarr[1] {
+					statusresp.StatusCode = 402
+					goto passthroug
+				}
+				if saveprivatefileplus(filemap[dirarr[0]], dirarr[1], string(msg.Auth.Usrname), msg.Content, "740") {
+					statusresp.StatusCode = 200
+				} else {
+					statusresp.StatusCode = 400
+				}
+			}
+		passthroug:
+			ws.WriteJSON(statusresp)
 		}
 	}()
 }

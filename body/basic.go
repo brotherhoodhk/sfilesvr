@@ -44,6 +44,14 @@ type SendMsg struct {
 	Action  int    `json:"action"`
 	MessBox string `json:"messbox"`
 }
+
+// 客户端发向服务端格式(加强版)
+type SendMsgPlus struct {
+	Content []byte     `json:"content"`
+	Action  int        `json:"action"`
+	MessBox string     `json:"messbox"`
+	Auth    AuthMethod `json:"auth"`
+}
 type Response struct {
 	StatusCode int
 	Content    []byte
@@ -55,6 +63,29 @@ type CommonCommand struct {
 	Header   string
 	Cmd      map[string]string
 	Actionid int
+	//version 2.1
+	Auth AuthMethod
+}
+type AuthMethod struct {
+	Key     []byte
+	Usrname []byte
+}
+
+// user information
+type UserInfo struct {
+	Authkey   string
+	Writeable [3]bool
+	Readable  [3]bool
+	Execable  [3]bool
+}
+
+// file permission info
+type FilePmsInfo struct {
+	Owner     string
+	Group     string
+	Writeable [3]bool
+	Readable  [3]bool
+	Execable  [3]bool
 }
 
 func (s *Hub) Run() {
@@ -106,4 +137,8 @@ func GetVersion(filename string) (string, int) {
 		return filename, -1
 	}
 	return strings.Join(namearr[:len(namearr)-1], ""), ver
+}
+func (s *UserInfo) String() string {
+	res := s.Authkey
+	return res
 }

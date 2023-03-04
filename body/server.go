@@ -2,7 +2,6 @@ package body
 
 import (
 	"fmt"
-	"github.com/oswaldoooo/octools/toolsbox"
 	"net/http"
 	"os"
 	"strconv"
@@ -47,18 +46,14 @@ func init() {
 	}
 	//initialzation authkey
 	if key, ok := list["authkey"]; ok {
-		keybytes := toolsbox.Sha256([]byte(key))
-		if keybytes != nil {
-			authkey = string(keybytes)
-		} else {
-			processlog.Println("cant encrypt key to sha256")
-		}
+		authkey = key
 	}
 }
 func ServerStart() {
 	fmt.Println("wrbuffsize is ", wrbuffsize/MB, " MB")
 	go hub.Run()
 	http.HandleFunc("/singlefile", AcceptFile)
+	http.HandleFunc("/fls", AcceptFilePlus)
 	http.HandleFunc("/cmdline", OtherCommand)
 	fmt.Println("listen at port ", port)
 	http.ListenAndServe(":"+strconv.Itoa(port), nil)

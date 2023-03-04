@@ -2,15 +2,24 @@ package body
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
+	"sync"
+
+	"github.com/oswaldoooo/octools/toolsbox"
 )
 
+var WRLOCK sync.RWMutex
+
 func ParseList(path string) map[string]string {
+	//beta function,wrlock
+	WRLOCK.RLock()
 	f, err := ioutil.ReadFile(path)
+	WRLOCK.RUnlock()
 	if err != nil {
 		fmt.Println(err)
 		errorlog.Println(err)
@@ -37,7 +46,10 @@ func FormatList(origin map[string]string, path string) bool {
 	for k, v := range origin {
 		recordmsg += k + "=" + v + "\n"
 	}
+	//beta function,wrlock
+	WRLOCK.Lock()
 	err := ioutil.WriteFile(path, []byte(recordmsg), 0666)
+	WRLOCK.Unlock()
 	if err != nil {
 		fmt.Println("write list to file error")
 		errorlog.Println(err)
@@ -188,4 +200,27 @@ func isexistprivatefile(filename string) (string, bool) {
 		return "", false
 	}
 	return dirid + filelist[namearr[1]], true
+}
+
+// check auth info,return boolean
+func AuthServe(auth *AuthMethod) bool {
+	if len(auth.Key) > 0 && len(auth.Usrname) > 0 {
+		usr, ok := GetUserInfo(string(auth.Usrname))
+		if ok {
+			finalkey := toolsbox.Sha256([]byte(authkey + usr.Authkey))
+			if bytes.Compare(auth.Key, finalkey) == 0 {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// 检验是否为权限数
+func checkpmsnum(num string) bool {
+	_, err := strconv.Atoi(num)
+	if len(num) != 3 || err != nil {
+		return false
+	}
+	return true
 }

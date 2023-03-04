@@ -27,7 +27,7 @@ func SaveFile(content []byte, fileidpath string, privatedirname string) {
 		}
 		de, _ := ioutil.ReadDir(publicdir + fileidpath)
 		filename := publicdir + fileidpath + "/" + strconv.Itoa(len(de)+1) + ".sf"
-		f, err := os.OpenFile(filename, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0755)
+		f, err := os.OpenFile(filename, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0700)
 		if err != nil {
 			errorlog.Println(err)
 			return
@@ -57,7 +57,7 @@ func SaveFile(content []byte, fileidpath string, privatedirname string) {
 		}
 		de, _ := ioutil.ReadDir(privatedir + rootdir + "/" + child)
 		filename := privatedir + rootdir + "/" + child + "/" + strconv.Itoa(len(de)+1) + ".sf"
-		f, err := os.OpenFile(filename, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)
+		f, err := os.OpenFile(filename, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0740)
 		if err != nil {
 			errorlog.Println(err)
 			return
@@ -109,7 +109,7 @@ func saveprivatefile(dirid, filename string, content []byte) bool {
 			return false
 		}
 	}
-	_, err = os.OpenFile(privatemapdir+dirid, os.O_CREATE|os.O_RDONLY, 0644)
+	_, err = os.OpenFile(privatemapdir+dirid, os.O_CREATE|os.O_RDONLY, 0740)
 	filelist := ParseList(privatemapdir + dirid)
 	if _, ok := filelist[filename]; !ok {
 		fileid := rand.Intn(8999) + 1000
@@ -118,6 +118,41 @@ func saveprivatefile(dirid, filename string, content []byte) bool {
 	}
 	filelist = ParseList(privatemapdir + dirid)
 	SaveFile(content, dirid+filelist[filename], "")
+	return true
+}
+
+// 能够设立文件权限
+func saveprivatefileplus(dirid, filename, usrname string, content []byte, pmsnumber string) bool {
+	if !checkpmsnum(pmsnumber) {
+		processlog.Println(pmsnumber, " is not pmsnumber")
+		return false
+	}
+	//检查用户对目录操作的权限
+	rwxarr, oke := CheckPmsForFileInterface(usrname, dirid)
+	if !oke || !rwxarr[2] || !rwxarr[1] {
+		processlog.Println(usrname, " permission denied")
+		return false
+	}
+	originpath := privatedir + dirid
+	_, err := os.Stat(originpath)
+	if err != nil {
+		err = os.Mkdir(originpath, 0744)
+		if err != nil {
+			errorlog.Println(err)
+			return false
+		}
+	}
+	_, err = os.OpenFile(privatemapdir+dirid, os.O_CREATE|os.O_RDONLY, 0740)
+	_, err = os.OpenFile(privatemapdir+dirid+".pmsfs", os.O_CREATE|os.O_RDONLY, 0740)
+	filelist := ParseList(privatemapdir + dirid)
+	if _, ok := filelist[filename]; !ok {
+		fileid := rand.Intn(8999) + 1000
+		filelist[filename] = strconv.Itoa(fileid)
+		FormatList(filelist, privatemapdir+dirid)
+	}
+	filelist = ParseList(privatemapdir + dirid)
+	SaveFile(content, dirid+filelist[filename], "")
+	AddToFPMS(filelist[filename], usrname, "740", privatemapdir+dirid+".pmsfs")
 	return true
 }
 func deletefilefromprivate(heads string) bool {
