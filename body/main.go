@@ -252,7 +252,7 @@ func OtherCommand(w http.ResponseWriter, r *http.Request) {
 					resp.StatusCode = 400
 				}
 				goto passthrough
-			case 940:
+			case 840:
 				//认证版新建目录
 				if AuthServe(&cmd.Auth) && len(cmd.Header) > 0 {
 					if mkdirinprivate(cmd.Header) {
@@ -267,6 +267,119 @@ func OtherCommand(w http.ResponseWriter, r *http.Request) {
 					}
 				} else {
 					resp.StatusCode = 400
+				}
+				goto passthrough
+			case 842:
+				//拉取私立目录中的指定文件(认证版)
+				usrinfo, ok := GetUserInfo(string(cmd.Auth.Usrname))
+				if !AuthServe(&cmd.Auth) || !ok {
+					resp.StatusCode = 400
+					goto passthrough
+				}
+				if !isprivatefilename(cmd.Header) {
+					resp.StatusCode = 401
+					goto passthrough
+				}
+				namearr := strings.Split(cmd.Header, "/")
+				name, ver := GetVersion(namearr[1])
+				namearr[1] = name
+				cmd.Header = strings.Join(namearr, "/")
+				if fileid, ok := isexistprivatefile(cmd.Header); ok {
+					rwxpms := CheckPmsForFile(string(cmd.Auth.Usrname), usrinfo, fileid[3:], fileid[:3])
+					if !rwxpms[0] {
+						resp.StatusCode = 402
+						processlog.Println(string(cmd.Auth.Usrname), "dont have", cmd.Header, "'s read permission")
+						goto passthrough
+					}
+					content, okk := getfilecontent(fileid, ver)
+					if !okk {
+						resp.StatusCode = 400
+						processlog.Println(cmd.Header, "get file failed")
+						goto passthrough
+					}
+					resp.StatusCode = 200
+					resp.Content = content
+					resp.Footer = namearr[1]
+					goto passthrough
+				} else {
+					resp.StatusCode = 401
+					errorlog.Println(cmd.Header, "is not correct private filename")
+					goto passthrough
+				}
+			case 843:
+				//删除指定目录(认证版)
+				usrinfo, oke := GetUserInfo(string(cmd.Auth.Usrname))
+				if !AuthServe(&cmd.Auth) || !oke {
+					resp.StatusCode = 400
+					goto passthrough
+				}
+				if len(cmd.Header) == 0 {
+					resp.StatusCode = 400
+					goto passthrough
+				}
+				filelist := ParseList(filemappath)
+				if dirid, ok := filelist[cmd.Header]; ok && len(dirid) == 3 {
+					//目录名存在
+					rwxpms := CheckPmsForFile(string(cmd.Auth.Usrname), usrinfo, "", dirid)
+					if !rwxpms[2] {
+						resp.StatusCode = 402
+						processlog.Println(string(cmd.Auth.Usrname), "dont have execute permission on", cmd.Header)
+						goto passthrough
+					}
+					_, err := os.Stat(privatedir + dirid)
+					if err == nil {
+						err = os.RemoveAll(privatedir + dirid)
+						if err != nil {
+							errorlog.Println(err)
+							resp.StatusCode = 400
+							goto passthrough
+						}
+						err = os.Remove(privatemapdir + dirid)
+						if err != nil {
+							errorlog.Println(err)
+							resp.StatusCode = 400
+							goto passthrough
+						}
+					}
+					pmsfspath := buildpmspath(dirid)
+					_, err = os.Stat(pmsfspath)
+					if err == nil {
+						err = os.RemoveAll(pmsfspath)
+						if err != nil {
+							errorlog.Println(err)
+							resp.StatusCode = 400
+							goto passthrough
+						}
+					}
+					delete(filelist, cmd.Header)
+					FormatList(filelist, filemappath)
+					filelist = ParseList(FILEPMS)
+					delete(filelist, dirid)
+					FormatList(filelist, FILEPMS)
+					resp.StatusCode = 200
+					goto passthrough
+				} else {
+					resp.StatusCode = 400
+					goto passthrough
+				}
+			case 8431:
+				usrinfo, oke := GetUserInfo(string(cmd.Auth.Usrname))
+				if !AuthServe(&cmd.Auth) && !oke {
+					resp.StatusCode = 400
+					goto passthrough
+				}
+				if len(cmd.Header) == 0 {
+					resp.StatusCode = 400
+					goto passthrough
+				}
+				if !isprivatefilename(cmd.Header) {
+					resp.StatusCode = 401
+					goto passthrough
+				}
+				if statuscode, ok := deletefilefromprivateplus(cmd.Header, string(cmd.Auth.Usrname), usrinfo); ok {
+					resp.StatusCode = 200
+				} else {
+					resp.StatusCode = statuscode
 				}
 				goto passthrough
 			}
@@ -307,7 +420,7 @@ func AcceptFilePlus(w http.ResponseWriter, r *http.Request) {
 				goto passthroug
 			}
 			switch msg.Action {
-			case 941:
+			case 841:
 				//客户端向服务端上传私立目录文件
 				if !strings.ContainsRune(msg.MessBox, '/') || len(msg.MessBox) < 3 {
 					statusresp.StatusCode = 401
@@ -321,7 +434,7 @@ func AcceptFilePlus(w http.ResponseWriter, r *http.Request) {
 				}
 				filemap := ParseList(filemappath)
 				//debugline
-				processlog.Println(filemap)
+				// processlog.Println(filemap)
 				if _, ok := filemap[dirarr[0]]; !ok || len(msg.Content) < 1 {
 					processlog.Println(dirarr[0], " dont exist in filemap msg content length ", len(msg.Content))
 					statusresp.StatusCode = 400
@@ -334,9 +447,10 @@ func AcceptFilePlus(w http.ResponseWriter, r *http.Request) {
 					statusresp.StatusCode = 400
 					goto passthroug
 				}
-				pmsarr := CheckPmsForFile(string(msg.Auth.Usrname), usfinfo, filemap[dirarr[0]])
+				pmsarr := CheckPmsForFile(string(msg.Auth.Usrname), usfinfo, "", filemap[dirarr[0]])
 				if !pmsarr[1] {
 					statusresp.StatusCode = 402
+					processlog.Println(string(msg.Auth.Usrname), "dont have write permission on", msg.MessBox)
 					goto passthroug
 				}
 				if saveprivatefileplus(filemap[dirarr[0]], dirarr[1], string(msg.Auth.Usrname), msg.Content, "740") {

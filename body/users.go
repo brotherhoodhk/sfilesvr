@@ -134,8 +134,8 @@ func GetUserInfo(usrname string) (*UserInfo, bool) {
 }
 
 // get file or directory permission information
-func GetFilePermission(fileid string) *FilePmsInfo {
-	fileinfo := ParseList(FILEPMS)
+func GetFilePermission(fileid, filepath string) *FilePmsInfo {
+	fileinfo := ParseList(filepath)
 	if _, ok := fileinfo[fileid]; !ok && strings.Count(fileinfo[fileid], "&&") != 2 {
 		return nil
 	}
@@ -148,51 +148,64 @@ func GetFilePermission(fileid string) *FilePmsInfo {
 		processlog.Println(fileid, "'s permission number is incorrect")
 		return nil
 	}
-	newuser := &FilePmsInfo{Owner: fileab[0], Group: fileab[1], Writeable: [3]bool{}, Readable: [3]bool{}, Execable: [3]bool{}}
+	writeable := [3]bool{}
+	readable := [3]bool{}
+	execable := [3]bool{}
 	for i := 0; i < 3; i++ {
-		permissionnum, _ := strconv.Atoi(fileab[2])
+		permissionnum, _ := strconv.Atoi(fileab[2][i : i+1])
 		switch permissionnum {
 		case 0:
-			newuser.Readable[i] = false
-			newuser.Writeable[i] = false
-			newuser.Execable[i] = false
+			readable[i] = false
+			writeable[i] = false
+			execable[i] = false
 		case 1:
-			newuser.Readable[i] = false
-			newuser.Writeable[i] = false
-			newuser.Execable[i] = true
+			readable[i] = false
+			writeable[i] = false
+			execable[i] = true
 		case 2:
-			newuser.Readable[i] = false
-			newuser.Writeable[i] = true
-			newuser.Execable[i] = false
+			readable[i] = false
+			writeable[i] = true
+			execable[i] = false
 		case 3:
-			newuser.Readable[i] = false
-			newuser.Writeable[i] = true
-			newuser.Execable[i] = true
+			readable[i] = false
+			writeable[i] = true
+			execable[i] = true
 		case 4:
-			newuser.Readable[i] = true
-			newuser.Writeable[i] = false
-			newuser.Execable[i] = false
+			readable[i] = true
+			writeable[i] = false
+			execable[i] = false
 		case 5:
-			newuser.Readable[i] = true
-			newuser.Writeable[i] = false
-			newuser.Execable[i] = true
+			readable[i] = true
+			writeable[i] = false
+			execable[i] = true
 		case 6:
-			newuser.Readable[i] = true
-			newuser.Writeable[i] = true
-			newuser.Execable[i] = false
+			readable[i] = true
+			writeable[i] = true
+			execable[i] = false
 		case 7:
-			newuser.Readable[i] = true
-			newuser.Writeable[i] = true
-			newuser.Execable[i] = true
+			readable[i] = true
+			writeable[i] = true
+			execable[i] = true
 		}
 	}
+	newuser := &FilePmsInfo{Owner: fileab[0], Group: fileab[1], Writeable: writeable, Readable: readable, Execable: execable}
 	return newuser
 }
 
 // check usr permission for file,return [r,w,x]
-func CheckPmsForFile(usrname string, usr *UserInfo, fileid string) [3]bool {
-	filepms := GetFilePermission(fileid)
+func CheckPmsForFile(usrname string, usr *UserInfo, fileid, dirid string) [3]bool {
+	var filepms = new(FilePmsInfo)
+	if len(fileid) == 0 && len(dirid) == 3 {
+		//debug line
+		// processlog.Println("start search dirid pms")
+		filepms = GetFilePermission(dirid, FILEPMS)
+		//debug line
+		// processlog.Println(filepms)
+	} else if len(fileid) == 4 && len(dirid) == 3 {
+		filepms = GetFilePermission(fileid, buildpmspath(dirid))
+	}
 	if filepms == nil {
+		errorlog.Println("cant find", dirid+fileid, "info")
 		return [3]bool{false, false, false}
 	}
 	//the extension version 1.0,only support owner compare
@@ -206,12 +219,12 @@ func CheckPmsForFile(usrname string, usr *UserInfo, fileid string) [3]bool {
 		return respms
 	}
 }
-func CheckPmsForFileInterface(usrname, fileid string) ([3]bool, bool) {
+func CheckPmsForFileInterface(usrname, fileid, dirid string) ([3]bool, bool) {
 	usrinfo, ok := GetUserInfo(usrname)
 	if !ok {
 		return [3]bool{}, false
 	}
-	resarr := CheckPmsForFile(usrname, usrinfo, fileid)
+	resarr := CheckPmsForFile(usrname, usrinfo, fileid, dirid)
 	return resarr, true
 }
 

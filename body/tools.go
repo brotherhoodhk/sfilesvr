@@ -224,3 +224,8 @@ func checkpmsnum(num string) bool {
 	}
 	return true
 }
+
+// return dirpms file system path
+func buildpmspath(dirid string) string {
+	return privatemapdir + dirid + ".pmsfs"
+}

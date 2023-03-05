@@ -128,7 +128,7 @@ func saveprivatefileplus(dirid, filename, usrname string, content []byte, pmsnum
 		return false
 	}
 	//检查用户对目录操作的权限
-	rwxarr, oke := CheckPmsForFileInterface(usrname, dirid)
+	rwxarr, oke := CheckPmsForFileInterface(usrname, "", dirid)
 	if !oke || !rwxarr[2] || !rwxarr[1] {
 		processlog.Println(usrname, " permission denied")
 		return false
@@ -175,5 +175,43 @@ func deletefilefromprivate(heads string) bool {
 		return true
 	} else {
 		return false
+	}
+}
+
+// 需要验证权限
+func deletefilefromprivateplus(heads, usrname string, usrinfo *UserInfo) (int, bool) {
+	namearr := strings.Split(heads, "/")
+	filelist := ParseList(filemappath)
+	if _, ok := filelist[namearr[0]]; !ok {
+		return 200, true
+	}
+	firid := filelist[namearr[0]]
+	filelist = ParseList(privatemapdir + firid)
+	if _, ok := filelist[namearr[1]]; !ok {
+		return 200, true
+	}
+	rwxpms := CheckPmsForFile(usrname, usrinfo, "", firid)
+	if !rwxpms[2] {
+		processlog.Println(usrname, "dont have execute permission on", namearr[0])
+		return 402, false
+	}
+	secid := filelist[namearr[1]]
+	rwxpms = CheckPmsForFile(usrname, usrinfo, secid, firid)
+	if !rwxpms[2] {
+		processlog.Println(usrname, "dont have execute permission on", namearr[1])
+		return 402, false
+	}
+	completeid := firid + secid
+	if deletefile(completeid) {
+		//删除对应目录对应文件联系
+		delete(filelist, namearr[1])
+		FormatList(filelist, privatemapdir+firid)
+		firidpath := buildpmspath(firid)
+		filelist = ParseList(firidpath)
+		delete(filelist, secid)
+		FormatList(filelist, firidpath)
+		return 200, true
+	} else {
+		return 400, false
 	}
 }
