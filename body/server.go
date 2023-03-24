@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"sfilesvr/body/service"
 	"strconv"
 )
 
@@ -52,6 +53,7 @@ func init() {
 func ServerStart() {
 	fmt.Println("wrbuffsize is ", wrbuffsize/MB, " MB")
 	go hub.Run()
+	http.HandleFunc("/login", service.Login)
 	http.HandleFunc("/singlefile", AcceptFile)
 	http.HandleFunc("/fls", AcceptFilePlus)
 	http.HandleFunc("/cmdline", OtherCommand)

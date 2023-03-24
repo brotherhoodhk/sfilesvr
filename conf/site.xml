@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sfile_server>
+    <database_info>
+        <db>
+            <class>mysql</class>
+            <user>test</user>
+            <password>123456</password>
+            <address>localhost:3306</address>
+            <database>lab</database>
+            <charset>utf8</charset>
+        </db>
+    </database_info>
+    <plugin_info>
+        <plugin classname=""/>
+    </plugin_info>
+</sfile_server>
