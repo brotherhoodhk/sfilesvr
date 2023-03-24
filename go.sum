@@ -11,5 +11,7 @@ github.com/oswaldoooo/octools v0.0.0-20230320025258-10c184c3b628 h1:oaQ4ZochaKD8
 github.com/oswaldoooo/octools v0.0.0-20230320025258-10c184c3b628/go.mod h1:RCEYExIS71OUGjKdwyBhuKOIeHMjcBQxL6ErFpFNw0o=
 github.com/oswaldoooo/octools v0.0.0-20230320043422-afe4fe7dba6e h1:WRYjvF3zkSXXiQLxOKlLOF33PmNcLUfffv3jF0T73E8=
 github.com/oswaldoooo/octools v0.0.0-20230320043422-afe4fe7dba6e/go.mod h1:Vp3vk29BSrE/ngSamimNnlhC5AGesuI7dSFXNiN4uLM=
+github.com/oswaldoooo/octools v0.0.0-20230324131803-423d1fd488f2 h1:0nvh3K/A+bWDMDYr4adCH0Dxi/ZbUywObRY4UbKx5q0=
+github.com/oswaldoooo/octools v0.0.0-20230324131803-423d1fd488f2/go.mod h1:jnp2f+WsyMVyvMqJ0oyHoghp+RWRN/9CwR4xgsq76LE=
 golang.org/x/crypto v0.7.0 h1:AvwMYaRytfdeVt3u6mLaxYtErKYjxA2OXjJ1HHq6t3A=
 golang.org/x/crypto v0.7.0/go.mod h1:pYwdfH91IfpZVANVyUOhSIPZaFoJGxTFbZhFTx+dXZU=

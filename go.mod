@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/gorilla/websocket v1.5.0
-	github.com/oswaldoooo/octools v0.0.0-20230320043422-afe4fe7dba6e
+	github.com/oswaldoooo/octools v0.0.0-20230324131803-423d1fd488f2
 )
 
 require (
